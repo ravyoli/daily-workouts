@@ -72,8 +72,19 @@ function getDurations(month, color) {
 class App extends Component {
   constructor(props) {
     super(props);
+    this.toggleDataSeries = this.toggleDataSeries.bind(this);
     this.state = { };
   }
+
+	toggleDataSeries(e){
+		if (typeof(e.dataSeries.visible) === "undefined" || e.dataSeries.visible) {
+			e.dataSeries.visible = false;
+		}
+		else{
+			e.dataSeries.visible = true;
+		}
+    e.chart.render();
+	}
 
   getTooltip(e) {
     let ps = getPracticesInDate(e.dataPoint.label, e.dataSeries.name)
@@ -98,13 +109,22 @@ class App extends Component {
     				text: month
     			},
     			data: byColor,
-
+          axisY:{
+   maximum: 120,
+ },
+          legend: {
+          				verticalAlign: "center",
+          				horizontalAlign: "right",
+          				reversed: true,
+          				cursor: "pointer",
+          				itemclick: this.toggleDataSeries
+          			},
         toolTip: {
             content: (e) => this.getTooltip(e.entries[0])
         }
     };
 
-    return <div style={{width: 1500}}><CanvasJSChart options = {options} /></div>;
+    return <div style={{width: 1500}}><CanvasJSChart options={options} /></div>;
   }
 
   render() {
