@@ -1,7 +1,8 @@
 import React, { Component } from 'react';
 import './App.css';
-import { BarChart } from 'react-easy-chart';
-import { Data } from'./data.js';
+import { Data } from './data.js';
+
+import { CanvasJS, CanvasJSChart } from './canvasjs.react';
 
 function getClassByPractice(practice) {
   if (Data.classes[practice]) {
@@ -26,8 +27,15 @@ function getDaysOfMonth(month) {
   return dates;
 }
 
-function getPracticesInDate(date) {
-  return Data.dates[date] || [];
+function getPracticesInDate(date, color) {
+  let practices = Data.dates[date];
+  if (!practices) {
+    return [];
+  }
+  if (color) {
+    practices = practices.filter(practice => getClassByPractice(practice).color === color);
+  }
+  return practices || [];
 }
 
 function getClassToString(clazz) {
@@ -44,16 +52,20 @@ function getLongestPracticeInDate(date) {
   return maxP;
 }
 
-function getDurations(month) {
-  var p;
+function getAllColors() {
+  return Array.from( new Set( Object.values(Data.classes).map(cls => cls.color || 'na') ) );
+}
+
+function getDurations(month, color) {
+
   return getDaysOfMonth(month).map(date => ({
-      'x': date,
-      'y': getPracticesInDate(date)
+      'label': date,
+      'y': getPracticesInDate(date, color)
       .reduce(
         (sum, p) => sum += getClassByPractice(p).duration,
         0
       ),
-      'color': (p = getLongestPracticeInDate(date)) && p.color
+      // 'color': (p = getLongestPracticeInDate(date)) && p.color
     }));
 }
 
@@ -63,46 +75,36 @@ class App extends Component {
     this.state = { };
   }
 
-  getTooltip() {
-    if(!this.state.showToolTip) {
-      return null;
-    }
-
-    const divStyle = {
-      position: "absolute",
-      top: this.state.top,
-      left: this.state.left,
-      backgroundColor: 'white',
-      border: 'solid black 1px',
-      padding: '2px',
-      width: '300px',
-      transform: 'translate(0, -100%)',
-    };
-
-    const practices =
-    getPracticesInDate(this.state.x)
+  getTooltip(e) {
+    let ps = getPracticesInDate(e.dataPoint.label, e.dataSeries.name)
       .map(p => getClassByPractice(p))
-      .map((c,i) => <div key={i}>{getClassToString(c)}</div>);
+      .map((c,i) => getClassToString(c));
 
-    return <div style={divStyle}>
-      {this.state.x}: {this.state.y} minutes
-      {practices}
-    </div>;
+    ps.unshift(e.dataSeries.name + ':');
+    return ps.join('<br/>');
   }
 
   getChartForMonth(month) {
-    return <BarChart
-      key={"bar-" + month}
-      axes
-      grid
-      yTickNumber={4}
-      yDomainRange={[0, 120]}
-      mouseOutHandler={this.mouseOutHandler.bind(this)}
-      mouseMoveHandler={this.mouseMoveHandler.bind(this)}
-      height={400}
-      width={1000}
-      data={getDurations(month)}
-    />;
+    const byColor = getAllColors().map(color => (
+    {
+      type: "stackedColumn",
+      dataPoints: getDurations(month, color),
+      name: color,
+      showInLegend: true,
+    }));
+
+    const options = {
+          title: {
+    				text: month
+    			},
+    			data: byColor,
+
+        toolTip: {
+            content: (e) => this.getTooltip(e.entries[0])
+        }
+    };
+
+    return <div style={{width: 1500}}><CanvasJSChart options = {options} /></div>;
   }
 
   render() {
@@ -113,22 +115,8 @@ class App extends Component {
     return (
       <div className="App">
         {charts}
-        {this.getTooltip()}
       </div>
     );
-  }
-
-  mouseMoveHandler(d,e) {
-    this.setState({
-      showToolTip: true,
-      top: `${e.pageY - 4}px`,
-      left: `${e.pageX + 4}px`,
-      y: d.y,
-      x: d.x});
-  }
-
-  mouseOutHandler() {
-    this.setState({showToolTip: false});
   }
 }
 
