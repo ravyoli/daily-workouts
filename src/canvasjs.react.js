@@ -1,4 +1,4 @@
-import React, { Component } from 'react';
+import React from 'react';
 import { CanvasJS } from './canvasjs.min';
 
 class CanvasJSChart extends React.Component {

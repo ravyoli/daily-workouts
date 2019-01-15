@@ -2,7 +2,7 @@ import React, { Component } from 'react';
 import './App.css';
 import { Data } from './data.js';
 
-import { CanvasJS, CanvasJSChart } from './canvasjs.react';
+import { CanvasJSChart } from './canvasjs.react';
 
 function getClassByPractice(practice) {
   if (Data.classes[practice]) {
@@ -21,13 +21,22 @@ function getClassByPractice(practice) {
 
 function getDaysOfMonth(month) {
   const dates = [];
+  month = new Date(month);
   for (let day = 1; day <= 31; day++) {
-    dates.push(month + day);
+    let date = new Date(month);
+    date.setDate(day);
+    if (date.getMonth() === month.getMonth()) {
+      dates.push(date);
+    }
   }
   return dates;
 }
 
 function getPracticesInDate(date, color) {
+  if (date.toISOString) {
+    date = date.toISOString().slice(0,10);
+  }
+
   let practices = Data.dates[date];
   if (!practices) {
     return [];
@@ -42,16 +51,6 @@ function getClassToString(clazz) {
   return `${clazz.name} (${clazz.duration})`;
 }
 
-function getLongestPracticeInDate(date) {
-  let maxP = null;
-  getPracticesInDate(date).map(p => getClassByPractice(p)).forEach(p => {
-    if (!maxP || p.duration > maxP.duration) {
-      maxP = p;
-    }
-  });
-  return maxP;
-}
-
 function getAllColors() {
   return Array.from( new Set( Object.values(Data.classes).map(cls => cls.color || 'na') ) );
 }
@@ -59,7 +58,7 @@ function getAllColors() {
 function getDurations(month, color) {
 
   return getDaysOfMonth(month).map(date => ({
-      'label': date,
+      'x': date,
       'y': getPracticesInDate(date, color)
       .reduce(
         (sum, p) => sum += getClassByPractice(p).duration,
@@ -74,20 +73,27 @@ class App extends Component {
     super(props);
     this.toggleDataSeries = this.toggleDataSeries.bind(this);
     this.state = { };
+    this.charts = { };
   }
 
-	toggleDataSeries(e){
-		if (typeof(e.dataSeries.visible) === "undefined" || e.dataSeries.visible) {
-			e.dataSeries.visible = false;
-		}
-		else{
-			e.dataSeries.visible = true;
-		}
-    e.chart.render();
+	toggleDataSeries(e) {
+    const dsName = e.dataSeries.name;
+    const charts = Object.values(this.charts);
+    if (this.focused === dsName) {
+      this.focused = null;
+    } else {
+      this.focused = dsName;
+    }
+
+    charts.forEach(chart => {
+      chart.options.data.filter(ds => ds.name === dsName)[0].visible = true;
+      chart.options.data.filter(ds => ds.name !== dsName).forEach(ds => ds.visible = !this.focused );
+      chart.render();
+    });
 	}
 
   getTooltip(e) {
-    let ps = getPracticesInDate(e.dataPoint.label, e.dataSeries.name)
+    let ps = getPracticesInDate(e.dataPoint.x, e.dataSeries.name)
       .map(p => getClassByPractice(p))
       .map((c,i) => getClassToString(c));
 
@@ -109,9 +115,14 @@ class App extends Component {
     				text: month
     			},
     			data: byColor,
+          axisX: {
+            interval: 1,
+            intervalType: "day",
+            valueFormatString: "D",
+          },
           axisY:{
-   maximum: 120,
- },
+            maximum: 120,
+          },
           legend: {
           				verticalAlign: "center",
           				horizontalAlign: "right",
@@ -124,11 +135,11 @@ class App extends Component {
         }
     };
 
-    return <div style={{width: 1500}}><CanvasJSChart options={options} /></div>;
+    return <div style={{width: 1500, padding:10}}><CanvasJSChart options={options} onRef={ref => this.charts[month] = ref} /></div>;
   }
 
   render() {
-    const charts = ['Dec', 'Nov', 'Oct'].map(month =>
+    const charts = ['2019-01', '2018-12', '2018-11', '2018-10'].map(month =>
       this.getChartForMonth(month)
     );
 
