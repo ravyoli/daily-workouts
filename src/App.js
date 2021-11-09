@@ -4,6 +4,9 @@ import { Data } from './data.js';
 
 import { CanvasJSChart } from './canvasjs.react';
 
+
+const DATES = ['2019-04', '2019-03', '2019-02', '2019-01', '2018-12', '2018-11', '2018-10'];
+
 function getClassByPractice(practice) {
   if (Data.classes[practice]) {
     return Data.classes[practice]
@@ -118,7 +121,7 @@ class App extends Component {
           axisX: {
             interval: 1,
             intervalType: "day",
-            valueFormatString: "D",
+            valueFormatString: "DDD",
           },
           axisY:{
             maximum: 120,
@@ -139,7 +142,7 @@ class App extends Component {
   }
 
   render() {
-    const charts = ['2019-01', '2018-12', '2018-11', '2018-10'].map(month =>
+    const charts = DATES.map(month =>
       this.getChartForMonth(month)
     );
 
